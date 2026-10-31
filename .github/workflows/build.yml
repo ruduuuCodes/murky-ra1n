@@ -20,7 +20,7 @@ jobs:
       - name: Install Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk libfuse2 binutils wget
+          sudo apt-get install -y python3-tk libfuse2 binutils curl squashfs-tools
           pip install pyinstaller
 
       - name: Build Binary
@@ -42,11 +42,16 @@ jobs:
           Categories=Utility;Settings;
           EOF
 
-          wget -q https://raw.githubusercontent.com/feathericons/feather/master/icons/keyboard.svg -O AppDir/keyboard.svg
+          # Build icon locally (no external download required)
+          cat << 'EOF' > AppDir/keyboard.svg
+          <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg>
+          EOF
+
           cp AppDir/keyboard.svg AppDir/usr/share/icons/hicolor/256x256/apps/keyboard.svg
           ln -sr AppDir/usr/bin/MagicKeyboardManager AppDir/AppRun
 
-          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          # Download appimagetool from the updated official repository
+          curl -fsSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
           chmod +x appimagetool
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir Magic_Keyboard_Manager-x86_64.AppImage
 
