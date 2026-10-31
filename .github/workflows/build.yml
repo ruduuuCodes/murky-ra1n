@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-tk libfuse2 binutils curl squashfs-tools
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
       - name: Build Binary
         run: |
@@ -33,24 +33,35 @@ jobs:
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
           cp -r dist/MagicKeyboardManager/* AppDir/usr/bin/
 
+          # 1. Create the Desktop Entry
           cat << 'EOF' > AppDir/MagicKeyboardManager.desktop
           [Desktop Entry]
           Name=Magic Keyboard Manager
           Exec=MagicKeyboardManager
           Icon=keyboard
           Type=Application
-          Categories=Utility;Settings;
+          Categories=Utility;
           EOF
 
-          # Build icon locally (no external download required)
-          cat << 'EOF' > AppDir/keyboard.svg
-          <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg>
-          EOF
+          # 2. Generate a valid 256x256 PNG icon using Python
+          python3 -c "
+          from PIL import Image, ImageDraw
+          img = Image.new('RGBA', (256, 256), (35, 39, 46, 255))
+          draw = ImageDraw.Draw(img)
+          draw.rounded_rectangle([15, 35, 241, 221], radius=20, outline=(220, 220, 220), width=6)
+          for y in [55, 95, 135]:
+              for x in range(30, 230, 32):
+                  draw.rounded_rectangle([x, y, x + 24, y + 24], radius=4, fill=(160, 160, 160))
+          draw.rounded_rectangle([60, 175, 196, 200], radius=4, fill=(160, 160, 160))
+          img.save('AppDir/keyboard.png')
+          "
 
-          cp AppDir/keyboard.svg AppDir/usr/share/icons/hicolor/256x256/apps/keyboard.svg
+          # 3. Place icon where appimagetool requires it
+          cp AppDir/keyboard.png AppDir/.DirIcon
+          cp AppDir/keyboard.png AppDir/usr/share/icons/hicolor/256x256/apps/keyboard.png
           ln -sr AppDir/usr/bin/MagicKeyboardManager AppDir/AppRun
 
-          # Download appimagetool from the updated official repository
+          # 4. Download and run appimagetool
           curl -fsSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
           chmod +x appimagetool
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir Magic_Keyboard_Manager-x86_64.AppImage
