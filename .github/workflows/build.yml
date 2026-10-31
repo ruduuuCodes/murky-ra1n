@@ -1,0 +1,57 @@
+name: Build AppImage
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libfuse2 binutils wget
+          pip install pyinstaller
+
+      - name: Build Binary
+        run: |
+          pyinstaller --noconfirm --onedir --windowed --name "MagicKeyboardManager" main.py
+
+      - name: Assemble AppImage
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          cp -r dist/MagicKeyboardManager/* AppDir/usr/bin/
+
+          cat << 'EOF' > AppDir/MagicKeyboardManager.desktop
+          [Desktop Entry]
+          Name=Magic Keyboard Manager
+          Exec=MagicKeyboardManager
+          Icon=keyboard
+          Type=Application
+          Categories=Utility;Settings;
+          EOF
+
+          wget -q https://raw.githubusercontent.com/feathericons/feather/master/icons/keyboard.svg -O AppDir/keyboard.svg
+          cp AppDir/keyboard.svg AppDir/usr/share/icons/hicolor/256x256/apps/keyboard.svg
+          ln -sr AppDir/usr/bin/MagicKeyboardManager AppDir/AppRun
+
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir Magic_Keyboard_Manager-x86_64.AppImage
+
+      - name: Upload Downloadable AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: Magic_Keyboard_Manager-x86_64
+          path: Magic_Keyboard_Manager-x86_64.AppImage
